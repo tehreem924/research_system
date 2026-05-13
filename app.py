@@ -92,6 +92,25 @@ st.markdown(
         text-transform: uppercase;
     }
 
+    /* ── Select box styling (for examples) ── */
+    .stSelectbox > div > div > select {
+        background: var(--surface) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 6px !important;
+        color: var(--text) !important;
+        font-family: 'DM Mono', monospace !important;
+        font-size: 0.75rem !important;
+        padding: 0.75rem 1rem !important;
+        transition: border-color 0.2s;
+    }
+    .stSelectbox > div > div > select:hover {
+        border-color: var(--accent) !important;
+    }
+    .stSelectbox > div > div > select:focus {
+        border-color: var(--accent) !important;
+        box-shadow: 0 0 0 2px rgba(232,255,71,0.08) !important;
+    }
+
     /* ── Primary button ── */
     .stButton > button[kind="primary"],
     .stButton > button {
@@ -110,7 +129,6 @@ st.markdown(
         opacity: 0.88 !important;
         transform: translateY(-1px) !important;
     }
-
     /* ── Pipeline step card ── */
     .step-card {
         background: var(--surface);
@@ -283,7 +301,7 @@ with col_left:
     # ── Example topics ──────────────────────────────────────────────────────
     st.markdown(
         '<p style="font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;'
-        'color:#4a4a6a;margin-bottom:0.6rem;">Try an Example</p>',
+        'color:#4a4a6a;margin-bottom:0.4rem;">Try an Example</p>',
         unsafe_allow_html=True,
     )
     
@@ -295,10 +313,16 @@ with col_left:
         "Cybersecurity threats and defense strategies",
     ]
     
-    for example in example_topics:
-        if st.button(example, use_container_width=True, key=f"example_{example}"):
-            st.session_state.selected_topic = example
-            st.rerun()
+    selected_example = st.selectbox(
+        label="example_hidden",
+        options=[""] + example_topics,
+        label_visibility="collapsed",
+        index=0,
+    )
+    
+    if selected_example:
+        st.session_state.selected_topic = selected_example
+        st.rerun()
 
 # ── RIGHT COLUMN: Pipeline steps visual ──────────────────────────────────────
 with col_right:
