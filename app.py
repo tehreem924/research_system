@@ -229,12 +229,12 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ── Header ────────────────────────────────────────────────────────────────────
+# ── Header — centered at top ─────────────────────────────────────────────────
 st.markdown(
     """
-    <div class="rm-header">
-        <span class="rm-logo">ResearchMind</span>
-        <span class="rm-tag">Multi-Agent Research System</span>
+    <div style="text-align: center; padding: 2rem 0 1rem 0; border-bottom: 1px solid #1e1e2e; margin-bottom: 2rem;">
+        <h1 style="font-family: 'Syne', sans-serif; font-weight: 800; font-size: 2.8rem; color: #e8ff47; margin: 0; letter-spacing: -1px;">ResearchMind</h1>
+        <p style="font-size: 0.72rem; color: #4a4a6a; letter-spacing: 0.18em; text-transform: uppercase; margin: 0.5rem 0 0 0;">Multi-Agent Research System</p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -247,9 +247,10 @@ for key in ("running", "search_done", "read_done", "report", "critique"):
         if key in ("report", "critique"):
             st.session_state[key] = ""
 
-# ── Layout: input col + pipeline col ─────────────────────────────────────────
+# ── Layout: input col (left) + pipeline steps col (right) ──────────────────────
 col_left, col_right = st.columns([1, 1], gap="large")
 
+# ── LEFT COLUMN: Topic input and run button ──────────────────────────────────
 with col_left:
     st.markdown(
         '<p style="font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;'
@@ -265,8 +266,14 @@ with col_left:
 
     run_btn = st.button("⚡  Run Research Pipeline", use_container_width=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
-
+# ── RIGHT COLUMN: Pipeline steps visual ──────────────────────────────────────
+with col_right:
+    st.markdown(
+        '<p style="font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;'
+        'color:#4a4a6a;margin-bottom:0.4rem;">Pipeline Status</p>',
+        unsafe_allow_html=True,
+    )
+    
     # ── Pipeline steps visual ──
     steps = [
         ("01", "Search Agent",  "Discovers relevant URLs via web search", "search_done"),
@@ -307,104 +314,105 @@ if run_btn:
         st.rerun()
 
 if st.session_state.running and topic.strip():
-    with col_right:
-        st.markdown(
-            '<div class="status-pill"><div class="dot"></div>Pipeline running…</div>',
-            unsafe_allow_html=True,
-        )
+    st.markdown(
+        '<div class="status-pill"><div class="dot"></div>Pipeline running…</div>',
+        unsafe_allow_html=True,
+    )
 
-        with st.spinner("Running all 4 agents — this may take 30–60 seconds…"):
-            try:
-                response = requests.post(
-                    f"{API_URL}/research",
-                    json={"topic": topic},
-                    timeout=180,
-                )
-                if response.status_code == 200:
-                    data = response.json()
-                    st.session_state.search_done = True
-                    st.session_state.read_done   = True
-                    st.session_state.report      = data["report"]
-                    st.session_state.critique    = data["critique"]
-
-                    with st.expander("🔍  Search Agent output", expanded=False):
-                        st.text(data["search_output"][:2000] + ("…" if len(data["search_output"]) > 2000 else ""))
-
-                    with st.expander("📄  Reader Agent output", expanded=False):
-                        st.text(data["reader_output"][:2000] + ("…" if len(data["reader_output"]) > 2000 else ""))
-                else:
-                    detail = response.json().get("detail", response.text)
-                    st.error(f"API error {response.status_code}: {detail}")
-                    st.session_state.running = False
-                    st.stop()
-
-            except requests.exceptions.ConnectionError:
-                st.error(f"Could not connect to the API at `{API_URL}`. Is the Render service running?")
-                st.session_state.running = False
-                st.stop()
-            except requests.exceptions.Timeout:
-                st.error("Request timed out after 3 minutes. The pipeline may still be running — try again.")
-                st.session_state.running = False
-                st.stop()
-            except Exception as e:
-                st.error(f"Unexpected error: {e}")
-                st.session_state.running = False
-                st.stop()
-
-        st.session_state.running = False
-        st.rerun()
-
-# ── Results display ───────────────────────────────────────────────────────────
-if st.session_state.report:
-    with col_right:
-        # Extract score from critique for the badge
-        score_line = ""
-        for line in st.session_state.critique.splitlines():
-            if line.strip().lower().startswith("score"):
-                score_line = line.split(":", 1)[-1].strip()
-                break
-
-        if score_line:
-            st.markdown(
-                f'<div style="margin-bottom:0.4rem;font-size:0.7rem;letter-spacing:0.18em;'
-                f'text-transform:uppercase;color:#4a4a6a;">Critic Score</div>'
-                f'<div class="score-badge">{score_line}</div>',
-                unsafe_allow_html=True,
+    with st.spinner("Running all 4 agents — this may take 30–60 seconds…"):
+        try:
+            response = requests.post(
+                f"{API_URL}/research",
+                json={"topic": topic},
+                timeout=180,
             )
+            if response.status_code == 200:
+                data = response.json()
+                st.session_state.search_done = True
+                st.session_state.read_done   = True
+                st.session_state.report      = data["report"]
+                st.session_state.critique    = data["critique"]
 
-        # Report panel
+                with st.expander("🔍  Search Agent output", expanded=False):
+                    st.text(data["search_output"][:2000] + ("…" if len(data["search_output"]) > 2000 else ""))
+
+                with st.expander("📄  Reader Agent output", expanded=False):
+                    st.text(data["reader_output"][:2000] + ("…" if len(data["reader_output"]) > 2000 else ""))
+            else:
+                detail = response.json().get("detail", response.text)
+                st.error(f"API error {response.status_code}: {detail}")
+                st.session_state.running = False
+                st.stop()
+
+        except requests.exceptions.ConnectionError:
+            st.error(f"Could not connect to the API at `{API_URL}`. Is the Render service running?")
+            st.session_state.running = False
+            st.stop()
+        except requests.exceptions.Timeout:
+            st.error("Request timed out after 3 minutes. The pipeline may still be running — try again.")
+            st.session_state.running = False
+            st.stop()
+        except Exception as e:
+            st.error(f"Unexpected error: {e}")
+            st.session_state.running = False
+            st.stop()
+
+    st.session_state.running = False
+    st.rerun()
+
+# ── Results display — full width below the main UI ───────────────────────────
+if st.session_state.report:
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Extract score from critique for the badge
+    score_line = ""
+    for line in st.session_state.critique.splitlines():
+        if line.strip().lower().startswith("score"):
+            score_line = line.split(":", 1)[-1].strip()
+            break
+
+    if score_line:
         st.markdown(
-            '<div class="output-panel">'
-            '<div class="panel-header">'
-            '<span class="panel-icon">📝</span>'
-            '<span class="panel-title">Research Report</span>'
-            '</div>',
+            f'<div style="margin-bottom:0.4rem;font-size:0.7rem;letter-spacing:0.18em;'
+            f'text-transform:uppercase;color:#4a4a6a;">Critic Score</div>'
+            f'<div class="score-badge">{score_line}</div>',
             unsafe_allow_html=True,
         )
-        st.markdown(st.session_state.report)
-        st.markdown("</div>", unsafe_allow_html=True)
 
-        st.markdown("<br>", unsafe_allow_html=True)
+    # Report panel
+    st.markdown(
+        '<div class="output-panel">'
+        '<div class="panel-header">'
+        '<span class="panel-icon">📝</span>'
+        '<span class="panel-title">Research Report</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(st.session_state.report)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-        # Critique panel
-        st.markdown(
-            '<div class="output-panel">'
-            '<div class="panel-header">'
-            '<span class="panel-icon">🔬</span>'
-            '<span class="panel-title">Critic Review</span>'
-            '</div>',
-            unsafe_allow_html=True,
-        )
-        st.markdown(st.session_state.critique)
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
 
-        # Download button
-        st.markdown("<br>", unsafe_allow_html=True)
-        combined = f"# Research Report\n\n{st.session_state.report}\n\n---\n\n# Critic Review\n\n{st.session_state.critique}"
-        st.download_button(
-            label="⬇  Download Report (.md)",
-            data=combined,
-            file_name=f"research_{topic[:40].replace(' ','_')}.md",
-            mime="text/markdown",
-            use_container_width=True,
-        )
+    # Critique panel
+    st.markdown(
+        '<div class="output-panel">'
+        '<div class="panel-header">'
+        '<span class="panel-icon">🔬</span>'
+        '<span class="panel-title">Critic Review</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(st.session_state.critique)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # Download button
+    st.markdown("<br>", unsafe_allow_html=True)
+    combined = f"# Research Report\n\n{st.session_state.report}\n\n---\n\n# Critic Review\n\n{st.session_state.critique}"
+    st.download_button(
+        label="⬇  Download Report (.md)",
+        data=combined,
+        file_name=f"research_{topic[:40].replace(' ','_')}.md",
+        mime="text/markdown",
+        use_container_width=True,
+    )
