@@ -241,10 +241,12 @@ st.markdown(
 )
 
 # ── Session state defaults ────────────────────────────────────────────────────
-for key in ("running", "search_done", "read_done", "report", "critique"):
+for key in ("running", "search_done", "read_done", "report", "critique", "selected_topic"):
     if key not in st.session_state:
         st.session_state[key] = False if key != "report" else ""
         if key in ("report", "critique"):
+            st.session_state[key] = ""
+        if key == "selected_topic":
             st.session_state[key] = ""
 
 # ── Layout: input col (left) + pipeline steps col (right) ──────────────────────
@@ -257,14 +259,44 @@ with col_left:
         'color:#4a4a6a;margin-bottom:0.4rem;">Research Topic</p>',
         unsafe_allow_html=True,
     )
-    topic = st.text_area(
+    
+    # Use selected topic if available, otherwise use text area input
+    topic_input = st.text_area(
         label="topic_hidden",
         label_visibility="collapsed",
+        value=st.session_state.selected_topic if st.session_state.selected_topic else "",
         placeholder="e.g.  The impact of large language models on scientific discovery",
         height=100,
     )
+    
+    # Clear selected_topic after using it
+    topic = topic_input if topic_input else st.session_state.selected_topic
+    if topic and st.session_state.selected_topic:
+        st.session_state.selected_topic = ""
 
     run_btn = st.button("⚡  Run Research Pipeline", use_container_width=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # ── Example topics ──────────────────────────────────────────────────────
+    st.markdown(
+        '<p style="font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;'
+        'color:#4a4a6a;margin-bottom:0.6rem;">Try an Example</p>',
+        unsafe_allow_html=True,
+    )
+    
+    example_topics = [
+        "Quantum computing breakthroughs in 2024",
+        "Impact of AI on healthcare and medical research",
+        "Climate change solutions and renewable energy",
+        "Future of space exploration",
+        "Cybersecurity threats and defense strategies",
+    ]
+    
+    for example in example_topics:
+        if st.button(example, use_container_width=True, key=f"example_{example}"):
+            st.session_state.selected_topic = example
+            st.rerun()
 
 # ── RIGHT COLUMN: Pipeline steps visual ──────────────────────────────────────
 with col_right:
