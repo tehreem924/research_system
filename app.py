@@ -278,23 +278,57 @@ with col_left:
 
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # ── Example topics ──────────────────────────────────────────────────────
+# ── Example topics ──────────────────────────────────────────────────────
     st.markdown(
         '<p style="font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;'
-        'color:#4a4a6a;margin-bottom:0.6rem;">Try an Example</p>',
+        'color:#4a4a6a;margin-bottom:0.4rem;">Try an Example</p>',
         unsafe_allow_html=True,
     )
-    
+
+    st.markdown(
+        """
+        <style>
+        /* Target all example buttons by their key prefix */
+        [data-testid="stButton"]:has(button[kind="secondary"]) button {
+            background: #111118 !important;
+            color: #e8e8f0 !important;
+            border: 1px solid #1e1e2e !important;
+            border-radius: 6px !important;
+            font-family: 'DM Mono', monospace !important;
+            font-size: 0.9rem !important;
+            font-weight: 400 !important;
+            letter-spacing: 0 !important;
+            padding: 0.75rem 1rem !important;
+            text-align: left !important;
+            justify-content: flex-start !important;
+            white-space: normal !important;
+            height: auto !important;
+            line-height: 1.4 !important;
+            transition: border-color 0.2s !important;
+            transform: none !important;
+        }
+        [data-testid="stButton"]:has(button[kind="secondary"]) button:hover {
+            border-color: #e8ff47 !important;
+            background: #111118 !important;
+            color: #e8e8f0 !important;
+            opacity: 1 !important;
+            transform: none !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     example_topics = [
-        "Quantum computing breakthroughs in 2024",
+        "Quantum computing breakthroughs in 2025",
         "Impact of AI on healthcare and medical research",
         "Climate change solutions and renewable energy",
         "Future of space exploration",
         "Cybersecurity threats and defense strategies",
     ]
-    
+
     for example in example_topics:
-        if st.button(example, use_container_width=True, key=f"example_{example}"):
+        if st.button(example, use_container_width=True, key=f"example_{example}", type="secondary"):
             st.session_state.selected_topic = example
             st.rerun()
 
