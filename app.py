@@ -1,10 +1,9 @@
 import streamlit as st
-from pipeline import (
-    build_search_agent,
-    build_reader_agent,
-    writer_chain,
-    critic_chain,
-)
+import requests
+import os
+
+# ── API base URL — reads from Streamlit secrets or environment variable ───────
+API_URL = st.secrets.get("API_URL", os.getenv("API_URL", "http://localhost:8000"))
 
 # ── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -248,50 +247,53 @@ for key in ("running", "search_done", "read_done", "report", "critique"):
         if key in ("report", "critique"):
             st.session_state[key] = ""
 
-# ── Layout: full-width input + pipeline overview ───────────────────────────
-st.markdown(
-    '<p style="font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;'
-    'color:#4a4a6a;margin-bottom:0.4rem;">Research Topic</p>',
-    unsafe_allow_html=True,
-)
-topic = st.text_area(
-    label="topic_hidden",
-    label_visibility="collapsed",
-    placeholder="e.g.  The impact of large language models on scientific discovery",
-    height=100,
-)
+# ── Layout: input col + pipeline col ─────────────────────────────────────────
+col_left, col_right = st.columns([1, 1], gap="large")
 
-run_btn = st.button("⚡  Run Research Pipeline", use_container_width=True)
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-# ── Pipeline steps visual ──
-steps = [
-    ("01", "Search Agent",  "Discovers relevant URLs via web search", "search_done"),
-    ("02", "Reader Agent",  "Scrapes & extracts content from pages",   "read_done"),
-    ("03", "Writer Chain",  "Synthesises a structured research report", "report"),
-    ("04", "Critic Chain",  "Scores and reviews the final report",      "critique"),
-]
-
-for num, title, desc, key in steps:
-    if st.session_state.running and not st.session_state[key]:
-        card_cls = "active"
-    elif st.session_state[key]:
-        card_cls = "done"
-    else:
-        card_cls = ""
-
-    icon = "✓ " if st.session_state[key] else ("⟳ " if card_cls == "active" else "")
+with col_left:
     st.markdown(
-        f"""
-        <div class="step-card {card_cls}">
-            <div class="step-label">Step {num}</div>
-            <div class="step-title">{icon}{title}</div>
-            <div style="font-size:0.78rem;color:#4a4a6a;margin-top:4px">{desc}</div>
-        </div>
-        """,
+        '<p style="font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;'
+        'color:#4a4a6a;margin-bottom:0.4rem;">Research Topic</p>',
         unsafe_allow_html=True,
     )
+    topic = st.text_area(
+        label="topic_hidden",
+        label_visibility="collapsed",
+        placeholder="e.g.  The impact of large language models on scientific discovery",
+        height=100,
+    )
+
+    run_btn = st.button("⚡  Run Research Pipeline", use_container_width=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ── Pipeline steps visual ──
+    steps = [
+        ("01", "Search Agent",  "Discovers relevant URLs via web search", "search_done"),
+        ("02", "Reader Agent",  "Scrapes & extracts content from pages",   "read_done"),
+        ("03", "Writer Chain",  "Synthesises a structured research report", "report"),
+        ("04", "Critic Chain",  "Scores and reviews the final report",      "critique"),
+    ]
+
+    for num, title, desc, key in steps:
+        if st.session_state.running and not st.session_state[key]:
+            card_cls = "active"
+        elif st.session_state[key]:
+            card_cls = "done"
+        else:
+            card_cls = ""
+
+        icon = "✓ " if st.session_state[key] else ("⟳ " if card_cls == "active" else "")
+        st.markdown(
+            f"""
+            <div class="step-card {card_cls}">
+                <div class="step-label">Step {num}</div>
+                <div class="step-title">{icon}{title}</div>
+                <div style="font-size:0.78rem;color:#4a4a6a;margin-top:4px">{desc}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 # ── Pipeline execution ────────────────────────────────────────────────────────
 if run_btn:
@@ -305,75 +307,57 @@ if run_btn:
         st.rerun()
 
 if st.session_state.running and topic.strip():
-    st.markdown(
-        '<div class="status-pill"><div class="dot"></div>Pipeline running…</div>',
-        unsafe_allow_html=True,
-    )
+    with col_right:
+        st.markdown(
+            '<div class="status-pill"><div class="dot"></div>Pipeline running…</div>',
+            unsafe_allow_html=True,
+        )
 
-    # ── Step 1: Search ────────────────────────────────────────────────────
-    with st.spinner("Search Agent — finding sources…"):
-        try:
-            search_agent = build_search_agent()
-            search_result = search_agent.invoke(
-                {"messages": [("human", f"Search for information about: {topic}")]}
-            )
-            search_output = search_result["messages"][-1].content
-            st.session_state.search_done = True
-        except Exception as e:
-            st.error(f"Search Agent failed: {e}")
-            st.session_state.running = False
-            st.stop()
+        with st.spinner("Running all 4 agents — this may take 30–60 seconds…"):
+            try:
+                response = requests.post(
+                    f"{API_URL}/research",
+                    json={"topic": topic},
+                    timeout=180,
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    st.session_state.search_done = True
+                    st.session_state.read_done   = True
+                    st.session_state.report      = data["report"]
+                    st.session_state.critique    = data["critique"]
 
-    with st.expander("🔍  Search Agent output", expanded=False):
-        search_str = str(search_output)
-        st.text(search_str[:2000] + ("…" if len(search_str) > 2000 else ""))
+                    with st.expander("🔍  Search Agent output", expanded=False):
+                        st.text(data["search_output"][:2000] + ("…" if len(data["search_output"]) > 2000 else ""))
 
-    # ── Step 2: Reader ────────────────────────────────────────────────────
-    with st.spinner("Reader Agent — scraping pages…"):
-        try:
-            reader_agent = build_reader_agent()
-            reader_result = reader_agent.invoke(
-                {"messages": [("human", f"Read and extract content from these search results:\n{search_output}")]}
-            )
-            reader_output = reader_result["messages"][-1].content
-            st.session_state.read_done = True
-        except Exception as e:
-            st.error(f"Reader Agent failed: {e}")
-            st.session_state.running = False
-            st.stop()
+                    with st.expander("📄  Reader Agent output", expanded=False):
+                        st.text(data["reader_output"][:2000] + ("…" if len(data["reader_output"]) > 2000 else ""))
+                else:
+                    detail = response.json().get("detail", response.text)
+                    st.error(f"API error {response.status_code}: {detail}")
+                    st.session_state.running = False
+                    st.stop()
 
-    with st.expander("📄  Reader Agent output", expanded=False):
-        reader_str = str(reader_output)
-        st.text(reader_str[:2000] + ("…" if len(reader_str) > 2000 else ""))
+            except requests.exceptions.ConnectionError:
+                st.error(f"Could not connect to the API at `{API_URL}`. Is the Render service running?")
+                st.session_state.running = False
+                st.stop()
+            except requests.exceptions.Timeout:
+                st.error("Request timed out after 3 minutes. The pipeline may still be running — try again.")
+                st.session_state.running = False
+                st.stop()
+            except Exception as e:
+                st.error(f"Unexpected error: {e}")
+                st.session_state.running = False
+                st.stop()
 
-    # ── Step 3: Writer ────────────────────────────────────────────────────
-    with st.spinner("Writer Chain — drafting report…"):
-        try:
-            report = writer_chain.invoke(
-                {"topic": topic, "research": reader_output}
-            )
-            st.session_state.report = report
-        except Exception as e:
-            st.error(f"Writer Chain failed: {e}")
-            st.session_state.running = False
-            st.stop()
-
-    # ── Step 4: Critic — reviewing report…
-    with st.spinner("Critic Chain — reviewing report…"):
-        try:
-            critique = critic_chain.invoke({"report": report})
-            st.session_state.critique = critique
-        except Exception as e:
-            st.error(f"Critic Chain failed: {e}")
-            st.session_state.running = False
-            st.stop()
-
-    st.session_state.running = False
-    st.rerun()
+        st.session_state.running = False
+        st.rerun()
 
 # ── Results display ───────────────────────────────────────────────────────────
 if st.session_state.report:
-    # Extract score from critique for the badge
+    with col_right:
+        # Extract score from critique for the badge
         score_line = ""
         for line in st.session_state.critique.splitlines():
             if line.strip().lower().startswith("score"):
