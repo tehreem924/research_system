@@ -324,32 +324,28 @@ with col_left:
 
     run_btn = st.button("⚡  Run Research Pipeline", use_container_width=True, key="run_main")
 
-    # ── Example topics ────────────────────────────────────────────────────────
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown(
-        '<p style="font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;'
-        'color:#4a4a6a;margin-bottom:0.6rem;">Try an Example</p>',
-        unsafe_allow_html=True,
-    )
+    # ── Example topics ──────────────────────────────────────────────────────── 
+    st.markdown("""
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem;">
+        <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#605850;letter-spacing:0.1em;">TRY →</span>
+    """, unsafe_allow_html=True)
+    examples = ["LLM agents 2025", "CRISPR gene editing", "Fusion energy progress"]
+    for ex in examples:
+        st.markdown(f"""
+        <span style="
+            background:rgba(255,255,255,0.04);
+            border:1px solid rgba(255,255,255,0.08);
+            border-radius:6px;
+            padding:0.25rem 0.7rem;
+            font-size:0.75rem;
+            color:#a09890;
+            font-family:'DM Sans',sans-serif;
+            cursor:default;
+        ">{ex}</span>
+        """, unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)  
 
-    example_topics = [
-        "Quantum computing in 2025",
-        "AI in healthcare",
-        "Climate & renewable energy",
-        "Future of space exploration",
-        "Cybersecurity threats 2025",
-    ]
-
-    # Render chips as tight auto-width columns
-    chip_cols = st.columns(len(example_topics))
-    for col, example in zip(chip_cols, example_topics):
-        with col:
-            st.markdown('<div class="chip-col">', unsafe_allow_html=True)
-            if st.button(example, key=f"ex_{example}"):
-                st.session_state.selected_topic = example
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-
+     
 # ─────────────────────────── RIGHT COLUMN ────────────────────────────────────
 with col_right:
 
